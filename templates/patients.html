@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patients List</title>
+</head>
+<body>
+    <h1>Patients Information</h1>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Patient Name</th>
+            <th>Patient Age</th>
+            <th>Result</th>
+            <th>Details</th>
+        </tr>
+        {% for patient in patients %}
+        <tr>
+            <td>{{ patient['id'] }}</td>
+            <td>{{ patient['patient_name'] }}</td>
+            <td>{{ patient['patient_age'] }}</td>
+            <td>{{ patient['result'] }}</td>
+            <td><a href="{{ url_for('patient_detail', id=patient['id']) }}">View Questions</a></td>
+        </tr>
+        {% endfor %}
+        <form action="{{ url_for('index') }}" method="get">
+            <button type="submit">返回</button>
+        </form>
+    </table>
+</body>
+</html>

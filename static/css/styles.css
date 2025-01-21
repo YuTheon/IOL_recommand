@@ -1,0 +1,88 @@
+/* Container */
+.container {
+    padding: 1.25rem;
+    max-width: 100%;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+/* Answered Question Section */
+.answered-question {
+    margin-bottom: 0.625rem;
+}
+
+/* Buttons */
+button {
+    margin: 0.3125rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 5px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+/* Button hover effect */
+button:hover {
+    background-color: #45a049;
+}
+
+/* Media Query for Small Devices */
+@media (max-width: 600px) {
+    .container {
+        padding: 1rem;
+    }
+    button {
+        width: 100%;
+        margin: 0.3125rem 0;
+    }
+}
+
+/* Container styling for the warning section */
+.container2 {
+    padding: 1rem;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-top: 1.5rem;
+    max-width: 600px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Title styling */
+.title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #d9534f;
+    margin-bottom: 1rem;
+}
+
+/* Paragraph styling */
+.paragraph {
+    margin-bottom: 0.75rem;
+}
+
+.paragraph p {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #333;
+}
+
+/* Media Query for Mobile Devices */
+@media (max-width: 600px) {
+    .container2 {
+        padding: 0.75rem;
+        margin-top: 1rem;
+    }
+    .title {
+        font-size: 1.25rem;
+    }
+    .paragraph p {
+        font-size: 0.875rem;
+    }
+}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <title>眼科检查表单</title>
+</head>
+<body>
+    <div class="container">
+        <h2>问卷</h2>
+        <form action="{{ url_for('show_result') }}" method="get">
+            <button type="submit">查看已有数据</button>
+        </form>
+        <form id="eyeDataForm">
+            <div class="form-group">
+                <label for="leftEyeAL">左眼眼轴长度 (mm):</label>
+                <input type="number" id="leftEyeAL" name="leftEyeAL" step="0.01" placeholder="请输入左眼眼轴长度" required>
+            </div>
+            <div class="form-group">
+                <label for="leftEyeCR">左眼角膜曲率半径 (mm):</label>
+                <input type="number" id="leftEyeCR" name="leftEyeCR" step="0.01" placeholder="请输入左眼角膜曲率半径" required>
+            </div>
+            <div class="output" id="leftEyeSEOutput"></div>
+
+            <div class="form-group">
+                <label for="rightEyeAL">右眼眼轴长度 (mm):</label>
+                <input type="number" id="rightEyeAL" name="rightEyeAL" step="0.01" placeholder="请输入右眼眼轴长度" required>
+            </div>
+            <div class="form-group">
+                <label for="rightEyeCR">右眼角膜曲率半径 (mm):</label>
+                <input type="number" id="rightEyeCR" name="rightEyeCR" step="0.01" placeholder="请输入右眼角膜曲率半径" required>
+            </div>
+            <div class="output" id="rightEyeSEOutput"></div>
+            <div class="form-group">
+                <label for="affectedEye">患病眼:</label>
+                <select id="affectedEye" name="affectedEye" required>
+                    <option value="">请选择患病眼</option>
+                    <option value="left">左眼</option>
+                    <option value="right">右眼</option>
+                </select>
+            </div>
+        </form>
+        <div id="answeredQuestions"></div>
+        <div id="currentQuestionContainer">
+            <p id="currentQuestionText" style="color: orange;"></p>
+            <div id="currentQuestionOptions"></div>
+        </div>
+        <div id="result" style="display:none;">
+            <h3>问卷结果: <span id="resultText"></span></h3>
+            <button onclick="reload()">重新开始</button><br><br>
+            
+            <label for="patientName">姓名: </label>
+            <input type="text" id="patientName" placeholder="请输入患者姓名" required><br><br>
+            <label for="patientAge">年龄: </label>
+            <input type="number" id="patientAge" placeholder="请输入患者年龄" required><br><br>
+
+            <button onclick="saveResults()" id="save-screenshot-button">保存结果</button>
+        </div>
+        <div class="container2" id="warning-section" style="display: none;">
+            <h2 class="title">提醒</h2>
+            <div class="paragraph">
+                <p>1. 年龄 大于 75岁</p>
+            </div>
+            <div class="paragraph">
+                <p>2. 瞳孔 小于 3mm</p>
+            </div>
+            <div class="paragraph">
+                <p>3. 隐式或显式内外斜视</p>
+            </div>
+            <div class="paragraph">
+                <p>不能做多焦晶体。</p>
+            </div>
+            <div class="paragraph">
+                <p>同时，对眩光敏感或者夜车司机也谨慎选择多焦晶体。</p>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</html>

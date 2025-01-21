@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <title>眼科检查表单</title>
+    <style>
+        /* Container */
+        .container {
+            padding: 1.25rem; /* Use rem for relative units to improve accessibility */
+            max-width: 100%; /* Make sure container is responsive */
+            width: 100%; /* Ensure width uses 100% of the available space */
+            max-width: 600px; /* Limit maximum width for larger screens */
+            margin: 0 auto; /* Center the container */
+            box-sizing: border-box; /* Ensure padding is included in width calculations */
+        }
+
+        /* Answered Question Section */
+        .answered-question {
+            margin-bottom: 0.625rem; /* Use rem instead of px to scale with root font-size */
+        }
+
+        /* Buttons */
+        button {
+            margin: 0.3125rem; /* Use rem for consistency and scalability */
+            padding: 0.625rem 1.25rem; /* Add padding to buttons for better touch usability */
+            border-radius: 5px; /* Add slight rounding for better aesthetics */
+            background-color: #4CAF50; /* Add basic styles for better user experience */
+            color: white; /* Improve contrast */
+            border: none; /* Simplify button appearance */
+            cursor: pointer; /* Make it clear the button is interactive */
+            font-size: 1rem; /* Ensure buttons are easily tappable on mobile */
+            transition: background-color 0.3s ease; /* Add smooth transition effect */
+        }
+
+        /* Button hover effect */
+        button:hover {
+            background-color: #45a049; /* Darken background on hover */
+        }
+
+        /* Media Query for Small Devices */
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem; /* Adjust padding for smaller screens */
+            }
+            button {
+                width: 100%; /* Make buttons full-width on mobile for easier tapping */
+                margin: 0.3125rem 0; /* Adjust margins for full-width buttons */
+            }
+        }
+
+        /* Container styling for the warning section */
+        .container2 {
+            padding: 1rem;
+            background-color: #f9f9f9; /* Light gray background for distinction */
+            border: 1px solid #ccc; /* Border around the warning box */
+            border-radius: 8px; /* Rounded corners */
+            margin-top: 1.5rem; /* Add some space from the preceding content */
+            max-width: 600px; /* Limit the width */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Add a subtle shadow */
+        }
+
+        /* Title styling */
+        .title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #d9534f; /* Red color to indicate a warning */
+            margin-bottom: 1rem;
+        }
+
+        /* Paragraph styling */
+        .paragraph {
+            margin-bottom: 0.75rem;
+        }
+
+        .paragraph p {
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #333; /* Darker color for readability */
+        }
+
+        /* Media Query for Mobile Devices */
+        @media (max-width: 600px) {
+            .container2 {
+                padding: 0.75rem;
+                margin-top: 1rem;
+            }
+            .title {
+                font-size: 1.25rem;
+            }
+            .paragraph p {
+                font-size: 0.875rem; /* Slightly smaller text for mobile */
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>问卷</h2>
+        <form action="{{ url_for('show_result') }}" method="get">
+            <button type="submit">查看已有数据</button>
+        </form>
+        <form id="eyeDataForm">
+            <div class="form-group">
+                <label for="leftEyeAL">左眼眼轴长度 (mm):</label>
+                <input type="number" id="leftEyeAL" name="leftEyeAL" step="0.01" placeholder="请输入左眼眼轴长度" required>
+            </div>
+            <div class="form-group">
+                <label for="leftEyeCR">左眼角膜曲率半径 (mm):</label>
+                <input type="number" id="leftEyeCR" name="leftEyeCR" step="0.01" placeholder="请输入左眼角膜曲率半径" required>
+            </div>
+            <div class="output" id="leftEyeSEOutput"></div>
+
+            <div class="form-group">
+                <label for="rightEyeAL">右眼眼轴长度 (mm):</label>
+                <input type="number" id="rightEyeAL" name="rightEyeAL" step="0.01" placeholder="请输入右眼眼轴长度" required>
+            </div>
+            <div class="form-group">
+                <label for="rightEyeCR">右眼角膜曲率半径 (mm):</label>
+                <input type="number" id="rightEyeCR" name="rightEyeCR" step="0.01" placeholder="请输入右眼角膜曲率半径" required>
+            </div>
+            <div class="output" id="rightEyeSEOutput"></div>
+            <div class="form-group">
+                <label for="affectedEye">患病眼:</label>
+                <select id="affectedEye" name="affectedEye" required>
+                    <option value="">请选择患病眼</option>
+                    <option value="left">左眼</option>
+                    <option value="right">右眼</option>
+                </select>
+            </div>
+        </form>
+        <div id="answeredQuestions"></div>
+        <div id="currentQuestionContainer">
+            <p id="currentQuestionText" style="color: orange;"></p>
+            <div id="currentQuestionOptions"></div>
+        </div>
+        <div id="result" style="display:none;">
+            <h3>问卷结果: <span id="resultText"></span></h3>
+            <button onclick="reload()">重新开始</button><br><br>
+            
+            <label for="patientName">姓名: </label>
+            <input type="text" id="patientName" placeholder="请输入患者姓名" required><br><br>
+            <label for="patientAge">年龄: </label>
+            <input type="number" id="patientAge" placeholder="请输入患者年龄" required><br><br>
+
+            <button onclick="saveResults()" id="save-screenshot-button">保存结果</button>
+            
+            <!-- <canvas id="canvas" style="display:none;"></canvas> -->
+
+        </div>
+        <div class="container2" id="warning-section" style="display: none;">
+            <h2 class="title">提醒</h2>
+            <div class="paragraph">
+                <p>1. 年龄 大于 75岁</p>
+            </div>
+            <div class="paragraph">
+                <p>2. 瞳孔 小于 3mm</p>
+            </div>
+            <div class="paragraph">
+                <p>3. 隐式或显式内外斜视</p>
+            </div>
+            <div class="paragraph">
+                <p>不能做多焦晶体。</p>
+            </div>
+            <div class="paragraph">
+                <p>同时，对眩光敏感或者夜车司机也谨慎选择多焦晶体。</p>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+
+        document.getElementById('eyeDataForm').addEventListener('input', function() {
+            const leftEyeAL = parseFloat(document.getElementById('leftEyeAL').value);
+            const leftEyeCR = parseFloat(document.getElementById('leftEyeCR').value);
+            const rightEyeAL = parseFloat(document.getElementById('rightEyeAL').value);
+            const rightEyeCR = parseFloat(document.getElementById('rightEyeCR').value);
+
+            const leftEyeSEOutput = document.getElementById('leftEyeSEOutput');
+            const rightEyeSEOutput = document.getElementById('rightEyeSEOutput');
+
+            if (!isNaN(leftEyeAL) && !isNaN(leftEyeCR)) {
+                const leftSE = 43.86 - 14.73 * (leftEyeAL / leftEyeCR);
+                leftEyeSEOutput.textContent = `左眼SE值: ${leftSE.toFixed(2)}`;
+            } else {
+                leftEyeSEOutput.textContent = '';
+            }
+
+            if (!isNaN(rightEyeAL) && !isNaN(rightEyeCR)) {
+                const rightSE = 43.86 - 14.73 * (rightEyeAL / rightEyeCR);
+                rightEyeSEOutput.textContent = `右眼SE值: ${rightSE.toFixed(2)}`;
+            } else {
+                rightEyeSEOutput.textContent = '';
+            }
+        });
+
+
+        let currentQuestionIndex = 0;
+        let answeredQuestions = [];
+
+        // Load the first question
+        document.addEventListener("DOMContentLoaded", loadQuestion);
+
+        // Define astigmatism questions
+        const astigmatismQuestions = [
+            {
+                question: "散光是否规则?",
+                options: [
+                    { text: "是", next: null, res: "规则" },
+                    { text: "否", next: null, res: "不规则" }
+                ]
+            },
+            {
+                question: "散光度数是否大于0.75D?",
+                options: [
+                    { text: "是", next: null, res: "大于0.75D" },
+                    { text: "否", next: null, res: "小于0.75D" }
+                ]
+            }
+        ];
+        let astigmatismIndex = 0; 
+                
+        // 调试信息输出到控制台
+        function logToConsole(message) {
+            console.log(message);
+        }
+
+        function loadQuestion() {
+            fetch(`/get_question/${currentQuestionIndex}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error(data.error);
+                        return;
+                    }
+
+                    // Display the current question
+                    document.getElementById('currentQuestionText').innerText = data.question;
+                    
+                    // Display the options
+                    const optionsContainer = document.getElementById('currentQuestionOptions');
+                    optionsContainer.innerHTML = ''; // Clear previous options
+                    data.options.forEach(option => {
+                        const button = document.createElement('button');
+                        button.innerText = option.text;
+                        button.onclick = () => handleAnswer(option.next, option.text, option.res, 1);
+                        optionsContainer.appendChild(button);
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // function handleAnswer(nextIndex, answerText, res) {
+        //     // Save answered question
+        //     answeredQuestions.push({ question: document.getElementById('currentQuestionText').innerText, answer: answerText });
+        //     displayAnsweredQuestions();
+
+        //     if (nextIndex !== null) {
+        //         currentQuestionIndex = nextIndex;
+        //         loadQuestion();
+        //     } else {
+        //         // If no more questions, fetch the result
+        //         fetch('/submit_answer', {
+        //             method: 'POST',
+        //             headers: {
+        //                 'Content-Type': 'application/json',
+        //             },
+        //             body: JSON.stringify({ res }),
+        //         })
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             document.getElementById('resultText').innerText = data.result;
+        //             document.getElementById('result').style.display = 'block';
+        //             document.getElementById('warning-section').style.display = 'block';
+        //             document.getElementById('currentQuestionContainer').style.display = 'none';
+        //         })
+        //         .catch(error => console.error('Error:', error));
+        //     }
+        // }
+        function handleAnswer(nextIndex, answerText, res, flag) {
+            // logToConsole(`Answer Text: ${answerText}, Res: ${res}, NextIndex: ${nextIndex}, flag: ${flag}`);
+            // Save answered question
+            answeredQuestions.push({ question: document.getElementById('currentQuestionText').innerText, answer: answerText });
+            displayAnsweredQuestions();
+
+            // If nextIndex is null and res exists, enter astigmatism questions
+            if (nextIndex === null && res !== null) {
+                // If astigmatism questions are not finished, move to the next astigmatism question
+                if (astigmatismIndex < astigmatismQuestions.length) {
+                    // Load astigmatism question
+                    const astigmatismQuestion = astigmatismQuestions[astigmatismIndex];
+                    document.getElementById('currentQuestionText').innerText = astigmatismQuestion.question;
+                    
+                    // Display astigmatism options
+                    const optionsContainer = document.getElementById('currentQuestionOptions');
+                    optionsContainer.innerHTML = ''; // Clear previous options
+                    astigmatismQuestion.options.forEach(option => {
+                        const button = document.createElement('button');
+                        button.innerText = option.text;
+                        button.onclick = () => {
+                            let a = 0;
+                            if(option.text === "是" && flag === 1){
+                                a = 1;
+                            }
+                            handleAnswer(null, option.text, res, a);
+                        }
+                        optionsContainer.appendChild(button);
+                    });
+                    astigmatismIndex++;
+                } else {
+                    // Astigmatism questions finished, submit the result
+                    submitResults(res, flag);
+                }
+            } else if (nextIndex !== null) {
+                // If there are more normal questions, continue with the next one
+                currentQuestionIndex = nextIndex;
+                loadQuestion();
+            } 
+        }
+
+    // Submit the final results, including astigmatism responses
+    function submitResults(res, flag) {
+        fetch('/submit_answer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ res, flag }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('resultText').innerText = data.result;
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('warning-section').style.display = 'block';
+            document.getElementById('currentQuestionContainer').style.display = 'none';
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+        function displayAnsweredQuestions() {
+            const container = document.getElementById('answeredQuestions');
+            container.innerHTML = ''; // Clear previous answered questions
+            answeredQuestions.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'answered-question';
+                div.innerHTML = `<p>${item.question}: ${item.answer}</p>`;
+                container.appendChild(div);
+            });
+        }
+
+        function reload() {
+            currentQuestionIndex = 0;
+            astigmatismIndex = 0;
+            answeredQuestions = [];
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('warning-section').style.display = 'none';
+            document.getElementById('currentQuestionContainer').style.display = 'block';
+            loadQuestion();
+        }
+
+        function saveResults() {
+            const patientName = document.getElementById('patientName').value;
+            const patientAge = document.getElementById('patientAge').value;
+
+            if (!patientName || !patientAge) {
+                alert("请填写患者姓名和年龄");
+                return;
+            }
+
+            // Send answered questions and result to the backend
+            fetch('/save_results', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    patientName: patientName,
+                    patientAge: patientAge,
+                    answeredQuestions: answeredQuestions,
+                    result: document.getElementById('resultText').innerText
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert("结果已成功保存！");
+                } else {
+                    alert("保存失败：" + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert("请求失败，请稍后再试。");
+            });
+
+            // html2canvas(document.body).then(function(canvas) {
+            //     // Convert canvas to image
+            //     var link = document.createElement('a');
+            //     link.href = canvas.toDataURL('image/png');
+            //     link.download = 'screenshot.png';
+            //     link.click();  // Trigger the download
+            // });
+        }
+        
+    </script>
+</body>
+</html>

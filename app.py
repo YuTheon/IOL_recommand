@@ -1,0 +1,256 @@
+from flask import Flask, render_template, jsonify, request, redirect, url_for
+import sqlite3
+
+app = Flask(__name__, 
+    static_url_path='', 
+    static_folder='static',
+    template_folder='templates')
+
+# Function to initialize the SQLite database (run this once or when needed)
+def init_db():
+    conn = sqlite3.connect('results.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_name TEXT,
+            patient_age INTEGER,
+            answered_questions TEXT,
+            result TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def get_db_connection():
+    conn = sqlite3.connect('results.db')  
+    conn.row_factory = sqlite3.Row
+    return conn
+# Initialize the database
+init_db()
+
+# Mock data (you can move this to a separate database if needed)
+astigmatism_questions = [
+    {"question": "散光是否规则?", "options": [{"text": "是", "next": None, "res": "规则"}, {"text": "否", "next": None, "res": "不规则"}]},
+    {"question": "散光度数是否大于0.75D?", "options": [{"text": "是", "next": None, "res": "大于0.75D"}, {"text": "否", "next": None, "res": "小于0.75D"}]},
+]
+
+questions = {
+    0: {
+        "question": "是否有脱镜需求？",
+        "options": [
+            {"text": "是", "next": 1, "res": None},
+            {"text": "否", "next": 7, "res": None}
+        ]
+    },
+    1: {
+        "question": "眼功能是否正常？（包括角膜正常，黄斑正常）",
+        "options": [
+            {"text": "是", "next": 3, "res": None},
+            {"text": "否", "next": 7, "res": None}
+        ]
+    },
+    3: {
+    "question": "预期费用？",
+    "options": [
+        { "text": "充足", "next": 4, "res": None },
+        { "text": "有限", "next": 7, "res": None}
+    ]
+    },
+    4: {
+    "question": "患者的工作和生活需求？",
+    "options": [
+        { "text": "基本戴镜，优先远处和近处的视力，费用适中。", "next": None, "res": 0},
+        { "text": "完全脱镜，视力范围全面，但价格偏高。", "next": 5, "res": None }
+    ]
+    },
+    5: {
+    "question": "患者眼轴长短？",
+    "options": [
+        { "text": "短眼轴", "next": None, "res": 1},
+        { "text": "正常或长眼轴", "next": None, "res": 2 }
+    ]
+    },
+    7: {
+    "question": "是否是双眼白内障或缺乏协同双眼视功能",
+    "options": [
+        { "text": "是（双眼白内障或没有协同视功能）", "next": 10, "res": None},
+        { "text": "否（单眼白内障且有协同视功能）", "next": 8, "res": None }
+    ]
+    },
+    8: {
+    "question": "患者是单眼白内障，是否有条件脱镜？",
+    "options": [
+        { "text": "没有条件脱镜", "next": 11, "res": None},
+        { "text": "有条件脱镜", "next": 9, "res": None }
+    ]
+    },
+    9: {
+    "question": "可以做双眼单视，但需要区分以下情况",
+    "options": [
+        { "text": "有脱镜愿望，但年轻时非双眼单视且文化水平有限", "next": None, "res": 3},
+        { "text": "原本为双眼单视（-1.0D~-1.5D），有强烈脱镜愿望且有一定学历", "next": None, "res": 4},
+        { "text": "年轻时为双眼单视，相差在-2.0D以上", "next": None, "res": 5}
+    ]
+    },
+    10: {
+    "question": "年轻时视力状况",
+    "options": [
+        { "text": "远视", "next": None, "res": 6},
+        { "text": "正视", "next": None, "res": 7},
+        { "text": "近视", "next": None, "res": 8}
+    ]
+    },
+    11: {
+    "question": "对侧眼状况",
+    "options": [
+        { "text": "远视", "next": 12, "res": None},
+        { "text": "正视", "next": 12, "res": None},
+        { "text": "近视", "next": 12, "res": None}
+    ]
+    },
+    12: {
+    "question": "手术眼状况",
+    "options": [
+        { "text": "短眼轴", "next": None, "res": 6},
+        { "text": "正常眼轴", "next": None, "res": 7},
+        { "text": "长眼轴", "next": None, "res": 9}
+    ]
+    },
+}
+
+results = {
+    0: "双焦IOL",
+    1: "EDOF",
+    2: "三焦点IOL",
+    3: "微单视，-0.5D~-0.75D",
+    4: "中单视， -1.0D~-1.5D",
+    5: "全单视，-1.75D~-2.5D",
+    6: "预留+0.5D~0D",
+    7: "预留-0.25D~-0.5D",
+    8: "预留近视度数 <-2.0D ",
+    9: "预留与对侧眼匹配，差值 <-2.0D"
+}
+# 在现有的代码中添加新的函数和修改submit_answer路由
+
+def get_single_focus_suggestion(axial_length, se_value=None):
+    """根据眼轴长度和SE值给出单焦点IOL建议"""
+    if axial_length <= 22.5:
+        return "建议预留 0 ~ +0.5D"
+    elif 22.5 < axial_length <= 24:
+        return "建议预留 -0.5D"
+    elif 24 < axial_length <= 26:
+        if se_value is not None:
+            if -3.0 <= se_value <= 0.5:
+                return "建议预留 -0.5D ~ 0D"
+            elif -6.0 <= se_value < -3.0:
+                return "建议预留 -1.0D ~ -0.5D"
+        return "需要SE值来确定具体建议"
+    elif 26 < axial_length <= 27:
+        return "建议预留 -1.0D"
+    elif 27 < axial_length <= 28:
+        return "建议预留 -2.5D ~ -2.0D"
+    else:  # > 28mm
+        return "建议预留 -3.0D"
+
+def get_multi_focus_suggestion(se_value):
+    """根据SE值给出多焦点IOL建议"""
+    if se_value >= 1.0:
+        return "判定为远视眼，建议多焦点IOL附加度数小 或 植入EDOF IOL"
+    elif se_value <= -3.0:
+        return "判定为近视眼，建议多焦点IOL附加度数大"
+    else:  # -3.0 < se_value < 1.0
+        return "可自由选择多焦点IOL"
+
+@app.route('/submit_answer', methods=['POST'])
+def submit_answer():
+    data = request.json
+    result_id = data.get("res")
+    flag = data.get("flag")
+    affected_eye = data.get("affected_eye")  # 获取患病眼
+    axial_length = data.get("axial_length")  # 获取眼轴长度
+    se_value = data.get("se_value")  # 获取SE值
+    
+    base_result = results.get(result_id, "Result not found")
+    
+    # 判断是否为单焦点或多焦点IOL的建议
+    if "单" in base_result:  # 如果是单焦点结果
+        additional_suggestion = get_single_focus_suggestion(axial_length, se_value)
+    elif any(keyword in base_result for keyword in ["多焦", "EDOF", "三焦"]):  # 如果是多焦点结果
+        additional_suggestion = get_multi_focus_suggestion(se_value)
+    else:
+        additional_suggestion = ""
+
+    final_result = f"{base_result}\n{additional_suggestion}"
+    
+    if flag == 1:
+        final_result += "\n建议植入散光矫正晶体"
+        
+    return jsonify({"result": final_result})
+# Serve the index page
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+# API to get questions by index
+@app.route('/get_question/<int:question_index>', methods=['GET'])
+def get_question(question_index):
+    question = questions.get(question_index, None)
+    if question:
+        return jsonify(question)
+    return jsonify({"error": "Question not found"}), 404
+
+# # API to submit answers (you can enhance this with more logic)
+# @app.route('/submit_answer', methods=['POST'])
+# def submit_answer():
+#     data = request.json
+#     result_id = data.get("res")
+#     flag = data.get("flag")
+#     result = results.get(result_id, "Result not found")
+#     # Add your logic here for processing answers
+#     # Example: return result based on the res value
+#     if flag == 1:
+#         result += ", 建议植入散光矫正晶体。"
+#     return jsonify({"result": result})
+
+# API to save results
+@app.route('/save_results', methods=['POST'])
+def save_results():
+    data = request.json
+    patient_name = data.get('patientName')
+    patient_age = data.get('patientAge')
+    answered_questions = data.get('answeredQuestions')
+    result = data.get('result')
+
+    # Validate input
+    if not patient_name or not patient_age:
+        return jsonify({"success": False, "error": "Patient name and age are required"}), 400
+
+    # Save to SQLite database
+    try:
+        conn = sqlite3.connect('results.db')
+        c = conn.cursor()
+        c.execute('INSERT INTO results (patient_name, patient_age, answered_questions, result) VALUES (?, ?, ?, ?)', 
+                  (patient_name, patient_age, str(answered_questions), result))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/show_result')
+def show_result():
+    conn = get_db_connection()
+    patients = conn.execute('SELECT id, patient_name, patient_age, result FROM results').fetchall()
+    conn.close()
+    return render_template('patients.html', patients=patients)
+
+@app.route('/patient/<int:id>')
+def patient_detail(id):
+    conn = get_db_connection()
+    patient = conn.execute('SELECT * FROM results WHERE id = ?', (id,)).fetchone()
+    conn.close()
+    return render_template('patient_detail.html', patient=patient)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=80, debug=True)
