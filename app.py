@@ -194,6 +194,35 @@ def get_lens_model(result_text):
     
     return ["无匹配的晶体型号推荐"]
 
+def get_formula_recommendation(axial_length):
+    """根据眼轴长度推荐公式"""
+    if axial_length < 22:
+        return {
+            "formula": "Hoffer Q 或 Barrett Universal II",
+            "links": {
+                "Hoffer Q": "https://www.aao.org/IOL-Calculation",
+                "Barrett Universal II": "https://www.apacrs.org/barrett_universal2"
+            }
+        }
+    elif 22 <= axial_length <= 24.5:
+        return {
+            "formula": "SRK/T、Holladay 1 或 Barrett Universal II",
+            "links": {
+                "SRK/T": "https://www.aao.org/IOL-Calculation",
+                "Holladay 1": "https://www.hicsoap.com/",
+                "Barrett Universal II": "https://www.apacrs.org/barrett_universal2"
+            }
+        }
+    else:  # axial_length > 24.5
+        return {
+            "formula": "Holladay 2 或 Barrett Universal II",
+            "links": {
+                "Holladay 2": "https://www.hicsoap.com/",
+                "Barrett Universal II": "https://www.apacrs.org/barrett_universal2"
+            }
+        }
+
+
 @app.route('/submit_answer', methods=['POST'])
 def submit_answer():
     data = request.json
@@ -227,9 +256,15 @@ def submit_answer():
     
     final_result += model_recommendations
     
+    formula_recommendation = get_formula_recommendation(axial_length)
+    formula_text = f"\n推荐公式: {formula_recommendation['formula']}"
+    formula_links = "\n相关链接:\n" + "\n".join(
+        [f"- {name}: {url}" for name, url in formula_recommendation["links"].items()]
+    )
+    final_result += formula_text + formula_links
     return jsonify({"result": final_result})
 
-    
+
 # Serve the index page
 @app.route('/')
 def index():

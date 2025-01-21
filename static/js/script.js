@@ -158,9 +158,26 @@ function submitResults(res, flag) {
     .then(response => response.json())
     .then(data => {
         document.getElementById('resultText').innerText = data.result;
-        document.getElementById('result').style.display = 'block';
+        // document.getElementById('result').style.display = 'block';
         document.getElementById('warning-section').style.display = 'block';
         document.getElementById('currentQuestionContainer').style.display = 'none';
+
+        // 提取公式相关数据
+        const formulaText = data.result.match(/推荐公式: (.+)/)[1];
+        const linksMatch = data.result.match(/相关链接:\n([\s\S]+)/);
+        const formulaLinks = linksMatch ? linksMatch[1].split("\n").map(link => link.trim()) : [];
+
+        document.getElementById('formulaText').innerText = formulaText;
+        const linksContainer = document.getElementById('formulaLinks');
+        linksContainer.innerHTML = '';
+        formulaLinks.forEach(link => {
+            const li = document.createElement('li');
+            li.innerHTML = `<a href="${link.split(': ')[1]}" target="_blank">${link.split(': ')[0]}</a>`;
+            linksContainer.appendChild(li);
+        });
+
+        document.getElementById('result').style.display = 'block';
+
     })
     .catch(error => console.error('Error:', error));
 }
