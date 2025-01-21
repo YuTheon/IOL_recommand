@@ -107,13 +107,53 @@ function handleAnswer(nextIndex, answerText, res, flag) {
     }
 }
 
+// function submitResults(res, flag) {
+//     fetch('/submit_answer', {
+//         method: 'POST',
+//         headers: {
+//             'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({ res, flag }),
+//     })
+//     .then(response => response.json())
+//     .then(data => {
+//         document.getElementById('resultText').innerText = data.result;
+//         document.getElementById('result').style.display = 'block';
+//         document.getElementById('warning-section').style.display = 'block';
+//         document.getElementById('currentQuestionContainer').style.display = 'none';
+//     })
+//     .catch(error => console.error('Error:', error));
+// }
 function submitResults(res, flag) {
+    // 获取患病眼信息
+    const affectedEye = document.getElementById('affectedEye').value;
+    
+    // 根据患病眼获取对应的SE值
+    let se_value;
+    if (affectedEye === 'left') {
+        const leftEyeAL = parseFloat(document.getElementById('leftEyeAL').value);
+        const leftEyeCR = parseFloat(document.getElementById('leftEyeCR').value);
+        se_value = 43.86 - 14.73 * (leftEyeAL / leftEyeCR);
+    } else if (affectedEye === 'right') {
+        const rightEyeAL = parseFloat(document.getElementById('rightEyeAL').value);
+        const rightEyeCR = parseFloat(document.getElementById('rightEyeCR').value);
+        se_value = 43.86 - 14.73 * (rightEyeAL / rightEyeCR);
+    }
+
     fetch('/submit_answer', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ res, flag }),
+        body: JSON.stringify({ 
+            res, 
+            flag, 
+            se_value: se_value ? se_value.toFixed(2) : null,
+            affected_eye: affectedEye,
+            axial_length: affectedEye === 'left' ? 
+                parseFloat(document.getElementById('leftEyeAL').value) : 
+                parseFloat(document.getElementById('rightEyeAL').value)
+        }),
     })
     .then(response => response.json())
     .then(data => {

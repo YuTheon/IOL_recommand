@@ -120,16 +120,16 @@ questions = {
 }
 
 results = {
-    0: "双焦IOL",
-    1: "EDOF",
-    2: "三焦点IOL",
-    3: "微单视，-0.5D~-0.75D",
-    4: "中单视， -1.0D~-1.5D",
-    5: "全单视，-1.75D~-2.5D",
-    6: "预留+0.5D~0D",
-    7: "预留-0.25D~-0.5D",
-    8: "预留近视度数 <-2.0D ",
-    9: "预留与对侧眼匹配，差值 <-2.0D"
+    0: "多焦点 双焦IOL",
+    1: "多焦点 EDOF",
+    2: "多焦点 三焦点IOL",
+    3: "单焦点 微单视，-0.5D~-0.75D",
+    4: "单焦点 中单视， -1.0D~-1.5D",
+    5: "单焦点 全单视，-1.75D~-2.5D",
+    6: "单焦点 预留+0.5D~0D",
+    7: "单焦点 预留-0.25D~-0.5D",
+    8: "单焦点 预留近视度数 <-2.0D ",
+    9: "单焦点 预留与对侧眼匹配，差值 <-2.0D"
 }
 # 在现有的代码中添加新的函数和修改submit_answer路由
 
@@ -162,21 +162,56 @@ def get_multi_focus_suggestion(se_value):
     else:  # -3.0 < se_value < 1.0
         return "可自由选择多焦点IOL"
 
+def get_lens_model(result_text):
+    """根据问卷结果推荐具体的晶体型号"""
+    
+    # 多焦点晶体推荐
+    if "多焦点 双焦IOL" in result_text:
+        return [
+            "爱尔康 SV25T0(+2.5D)",
+            "爱尔康 SN6AD1(+3.0D)"
+        ]
+    elif "多焦点 EDOF" in result_text:
+        return [
+            "强生眼力健 ZXR00 (新无极)"
+        ]
+    elif "多焦点 三焦点IOL" in result_text:
+        return [
+            "爱尔康 TFNT00 (Pan-Optix)"
+        ]
+    
+    # 单焦点晶体推荐
+    if any(keyword in result_text for keyword in ["单焦点", "预留"]):
+        base_models = [
+            "强生眼力健 ZMB00",
+            "卡尔蔡司 AT LISA 839MP",
+            "卡尔蔡司 AT LISA 809M"
+        ]
+        # 如果有散光矫正需求
+        if "散光矫正" in result_text:
+            base_models.append("卡尔蔡司 AT LISA TORIC 909M")
+        return base_models
+    
+    return ["无匹配的晶体型号推荐"]
+
 @app.route('/submit_answer', methods=['POST'])
 def submit_answer():
     data = request.json
     result_id = data.get("res")
     flag = data.get("flag")
-    affected_eye = data.get("affected_eye")  # 获取患病眼
-    axial_length = data.get("axial_length")  # 获取眼轴长度
-    se_value = data.get("se_value")  # 获取SE值
+    affected_eye = data.get("affected_eye")
+    axial_length = data.get("axial_length")
+    
+    try:
+        se_value = float(data.get("se_value")) if data.get("se_value") is not None else None
+    except (ValueError, TypeError):
+        se_value = None
     
     base_result = results.get(result_id, "Result not found")
     
-    # 判断是否为单焦点或多焦点IOL的建议
-    if "单" in base_result:  # 如果是单焦点结果
+    if "单" in base_result:
         additional_suggestion = get_single_focus_suggestion(axial_length, se_value)
-    elif any(keyword in base_result for keyword in ["多焦", "EDOF", "三焦"]):  # 如果是多焦点结果
+    elif any(keyword in base_result for keyword in ["多焦", "EDOF", "三焦"]):
         additional_suggestion = get_multi_focus_suggestion(se_value)
     else:
         additional_suggestion = ""
@@ -185,8 +220,16 @@ def submit_answer():
     
     if flag == 1:
         final_result += "\n建议植入散光矫正晶体"
-        
+    
+    # 获取推荐的晶体型号
+    recommended_models = get_lens_model(final_result)
+    model_recommendations = "\n推荐晶体型号：\n" + "\n".join(f"- {model}" for model in recommended_models)
+    
+    final_result += model_recommendations
+    
     return jsonify({"result": final_result})
+
+    
 # Serve the index page
 @app.route('/')
 def index():
