@@ -200,25 +200,25 @@ def get_formula_recommendation(axial_length):
         return {
             "formula": "Hoffer Q 或 Barrett Universal II",
             "links": {
-                "Hoffer Q": "https://www.aao.org/IOL-Calculation",
-                "Barrett Universal II": "https://www.apacrs.org/barrett_universal2"
+                "Hoffer Q": "https://hofferqst.com/",
+                "Barrett Universal II": "https://calc.apacrs.org/barrett_universal2105/"
             }
         }
     elif 22 <= axial_length <= 24.5:
         return {
             "formula": "SRK/T、Holladay 1 或 Barrett Universal II",
             "links": {
-                "SRK/T": "https://www.aao.org/IOL-Calculation",
-                "Holladay 1": "https://www.hicsoap.com/",
-                "Barrett Universal II": "https://www.apacrs.org/barrett_universal2"
+                "SRK/T": "http://eyecalc.org/srk-t/",
+                "Holladay 1": "https://www.calculatorultra.com/zh/tool/holladay-1-formula-calculator.html",
+                "Barrett Universal II": "https://calc.apacrs.org/barrett_universal2105/"
             }
         }
     else:  # axial_length > 24.5
         return {
             "formula": "Holladay 2 或 Barrett Universal II",
             "links": {
-                "Holladay 2": "https://www.hicsoap.com/",
-                "Barrett Universal II": "https://www.apacrs.org/barrett_universal2"
+                "Holladay 2": "https://www.hic-soap.com/calc",
+                "Barrett Universal II": "https://calc.apacrs.org/barrett_universal2105/"
             }
         }
 
@@ -230,11 +230,23 @@ def submit_answer():
     flag = data.get("flag")
     affected_eye = data.get("affected_eye")
     axial_length = data.get("axial_length")
+    se_value = data.get("se_value")
     
+    # Validate required data
+    if not affected_eye:
+        return jsonify({"error": "请选择患病眼！"}), 400
+        
+    if axial_length is None:
+        return jsonify({"error": "请填写眼轴长度！"}), 400
+        
+    if se_value is None:
+        return jsonify({"error": "请完整填写眼轴长度和角膜曲率半径以计算SE值！"}), 400
+        
     try:
-        se_value = float(data.get("se_value")) if data.get("se_value") is not None else None
+        axial_length = float(axial_length)
+        se_value = float(se_value) if se_value is not None else None
     except (ValueError, TypeError):
-        se_value = None
+        return jsonify({"error": "眼轴长度或SE值格式不正确！"}), 400
     
     base_result = results.get(result_id, "Result not found")
     
@@ -250,7 +262,6 @@ def submit_answer():
     if flag == 1:
         final_result += "\n建议植入散光矫正晶体"
     
-    # 获取推荐的晶体型号
     recommended_models = get_lens_model(final_result)
     model_recommendations = "\n推荐晶体型号：\n" + "\n".join(f"- {model}" for model in recommended_models)
     
@@ -262,8 +273,8 @@ def submit_answer():
         [f"- {name}: {url}" for name, url in formula_recommendation["links"].items()]
     )
     final_result += formula_text + formula_links
+    
     return jsonify({"result": final_result})
-
 
 # Serve the index page
 @app.route('/')

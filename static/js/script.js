@@ -107,28 +107,15 @@ function handleAnswer(nextIndex, answerText, res, flag) {
     }
 }
 
-// function submitResults(res, flag) {
-//     fetch('/submit_answer', {
-//         method: 'POST',
-//         headers: {
-//             'Content-Type': 'application/json',
-//         },
-//         body: JSON.stringify({ res, flag }),
-//     })
-//     .then(response => response.json())
-//     .then(data => {
-//         document.getElementById('resultText').innerText = data.result;
-//         document.getElementById('result').style.display = 'block';
-//         document.getElementById('warning-section').style.display = 'block';
-//         document.getElementById('currentQuestionContainer').style.display = 'none';
-//     })
-//     .catch(error => console.error('Error:', error));
-// }
+
+// Update the submitResults function
 function submitResults(res, flag) {
-    // 获取患病眼信息
+    if (!validateEyeMeasurements()) {
+        return;
+    }
+
     const affectedEye = document.getElementById('affectedEye').value;
     
-    // 根据患病眼获取对应的SE值
     let se_value;
     if (affectedEye === 'left') {
         const leftEyeAL = parseFloat(document.getElementById('leftEyeAL').value);
@@ -157,29 +144,69 @@ function submitResults(res, flag) {
     })
     .then(response => response.json())
     .then(data => {
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+        
         document.getElementById('resultText').innerText = data.result;
-        // document.getElementById('result').style.display = 'block';
         document.getElementById('warning-section').style.display = 'block';
         document.getElementById('currentQuestionContainer').style.display = 'none';
 
-        // 提取公式相关数据
-        const formulaText = data.result.match(/推荐公式: (.+)/)[1];
+        // Extract formula data
+        const formulaMatch = data.result.match(/推荐公式: (.+)/);
         const linksMatch = data.result.match(/相关链接:\n([\s\S]+)/);
-        const formulaLinks = linksMatch ? linksMatch[1].split("\n").map(link => link.trim()) : [];
-
-        document.getElementById('formulaText').innerText = formulaText;
-        const linksContainer = document.getElementById('formulaLinks');
-        linksContainer.innerHTML = '';
-        formulaLinks.forEach(link => {
-            const li = document.createElement('li');
-            li.innerHTML = `<a href="${link.split(': ')[1]}" target="_blank">${link.split(': ')[0]}</a>`;
-            linksContainer.appendChild(li);
-        });
+        
+        if (formulaMatch) {
+            document.getElementById('formulaText').innerText = formulaMatch[1];
+        }
+        
+        if (linksMatch) {
+            const formulaLinks = linksMatch[1].split("\n").map(link => link.trim());
+            const linksContainer = document.getElementById('formulaLinks');
+            linksContainer.innerHTML = '';
+            formulaLinks.forEach(link => {
+                if (link) {
+                    const li = document.createElement('li');
+                    const parts = link.split(': ');
+                    if (parts.length === 2) {
+                        li.innerHTML = `<a href="${parts[1]}" target="_blank">${parts[0].replace('- ', '')}</a>`;
+                        linksContainer.appendChild(li);
+                    }
+                }
+            });
+        }
 
         document.getElementById('result').style.display = 'block';
-
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+        alert("提交失败，请检查所有必填信息并重试。");
+    });
+}
+function validateEyeMeasurements() {
+    const affectedEye = document.getElementById('affectedEye').value;
+    if (!affectedEye) {
+        alert("请选择患病眼！");
+        return false;
+    }
+
+    if (affectedEye === 'left') {
+        const leftEyeAL = document.getElementById('leftEyeAL').value;
+        const leftEyeCR = document.getElementById('leftEyeCR').value;
+        if (!leftEyeAL || !leftEyeCR) {
+            alert("请填写左眼的眼轴长度和角膜曲率半径！");
+            return false;
+        }
+    } else if (affectedEye === 'right') {
+        const rightEyeAL = document.getElementById('rightEyeAL').value;
+        const rightEyeCR = document.getElementById('rightEyeCR').value;
+        if (!rightEyeAL || !rightEyeCR) {
+            alert("请填写右眼的眼轴长度和角膜曲率半径！");
+            return false;
+        }
+    }
+    return true;
 }
 
 function displayAnsweredQuestions() {
