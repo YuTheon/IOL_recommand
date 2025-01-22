@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -28,5 +28,133 @@
             <button type="submit">返回</button>
         </form>
     </table>
+</body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <title>患者数据列表</title>
+    <style>
+        .patients-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .patients-table th,
+        .patients-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .patients-table th {
+            background-color: #f5f5f5;
+        }
+        
+        .patients-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .patients-table tr:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .eye-data {
+            margin: 5px 0;
+        }
+        
+        .button-container {
+            margin: 20px 0;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        
+        .button:hover {
+            background-color: #45a049;
+        }
+        
+        .result-summary {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="button-container">
+            <a href="{{ url_for('index') }}" class="button">返回问卷</a>
+        </div>
+        
+        <h2>患者数据列表</h2>
+        
+        <table class="patients-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>姓名</th>
+                    <th>年龄</th>
+                    <th>左眼数据</th>
+                    <th>右眼数据</th>
+                    <th>患病眼</th>
+                    <th>诊断结果</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for patient in patients %}
+                <tr>
+                    <td>{{ patient.id }}</td>
+                    <td>{{ patient.patient_name }}</td>
+                    <td>{{ patient.patient_age }}</td>
+                    <td>
+                        <div class="eye-data">
+                            眼轴: {{ "%.2f"|format(patient.left_eye.al) if patient.left_eye.al else "未测量" }} mm
+                        </div>
+                        <div class="eye-data">
+                            曲率: {{ "%.2f"|format(patient.left_eye.cr) if patient.left_eye.cr else "未测量" }} mm
+                        </div>
+                        <div class="eye-data">
+                            SE值: {{ "%.2f"|format(patient.left_eye.se) if patient.left_eye.se else "未计算" }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="eye-data">
+                            眼轴: {{ "%.2f"|format(patient.right_eye.al) if patient.right_eye.al else "未测量" }} mm
+                        </div>
+                        <div class="eye-data">
+                            曲率: {{ "%.2f"|format(patient.right_eye.cr) if patient.right_eye.cr else "未测量" }} mm
+                        </div>
+                        <div class="eye-data">
+                            SE值: {{ "%.2f"|format(patient.right_eye.se) if patient.right_eye.se else "未计算" }}
+                        </div>
+                    </td>
+                    <td>{{ "左眼" if patient.affected_eye == "left" else "右眼" }}</td>
+                    <td>
+                        <div class="result-summary" title="{{ patient.result }}">
+                            {{ patient.result[:50] + "..." if patient.result|length > 50 else patient.result }}
+                        </div>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('patient_detail', id=patient.id) }}" class="button">查看详情</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </body>
 </html>

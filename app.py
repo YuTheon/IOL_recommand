@@ -15,6 +15,12 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             patient_name TEXT,
             patient_age INTEGER,
+            left_eye_al REAL,
+            left_eye_cr REAL,
+            right_eye_al REAL,
+            right_eye_cr REAL,
+            affected_eye TEXT,
+            se_value REAL,
             answered_questions TEXT,
             result TEXT
         )
@@ -308,19 +314,34 @@ def save_results():
     data = request.json
     patient_name = data.get('patientName')
     patient_age = data.get('patientAge')
+    left_eye_al = data.get('leftEyeAL')
+    left_eye_cr = data.get('leftEyeCR')
+    right_eye_al = data.get('rightEyeAL')
+    right_eye_cr = data.get('rightEyeCR')
+    affected_eye = data.get('affectedEye')
+    se_value = data.get('seValue')
     answered_questions = data.get('answeredQuestions')
     result = data.get('result')
 
-    # Validate input
+    # 验证输入
     if not patient_name or not patient_age:
-        return jsonify({"success": False, "error": "Patient name and age are required"}), 400
+        return jsonify({"success": False, "error": "患者姓名和年龄为必填项"}), 400
 
-    # Save to SQLite database
+    # 保存到 SQLite 数据库
     try:
         conn = sqlite3.connect('results.db')
         c = conn.cursor()
-        c.execute('INSERT INTO results (patient_name, patient_age, answered_questions, result) VALUES (?, ?, ?, ?)', 
-                  (patient_name, patient_age, str(answered_questions), result))
+        c.execute('''
+            INSERT INTO results (
+                patient_name, patient_age, left_eye_al, left_eye_cr,
+                right_eye_al, right_eye_cr, affected_eye, se_value,
+                answered_questions, result
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            patient_name, patient_age, left_eye_al, left_eye_cr,
+            right_eye_al, right_eye_cr, affected_eye, se_value,
+            str(answered_questions), result
+        ))
         conn.commit()
         conn.close()
         return jsonify({"success": True})
@@ -330,16 +351,81 @@ def save_results():
 @app.route('/show_result')
 def show_result():
     conn = get_db_connection()
-    patients = conn.execute('SELECT id, patient_name, patient_age, result FROM results').fetchall()
+    # 获取所有患者数据，包含新增的眼科测量数据
+    patients = conn.execute('''
+        SELECT id, patient_name, patient_age, 
+               left_eye_al, left_eye_cr, 
+               right_eye_al, right_eye_cr,
+               affected_eye, se_value, result 
+        FROM results
+        ORDER BY id DESC
+    ''').fetchall()
+    
+    # 处理患者数据，计算SE值
+    formatted_patients = []
+    for patient in patients:
+        # 计算左眼SE值
+        left_se = None
+        if patient['left_eye_al'] and patient['left_eye_cr']:
+            left_se = 43.86 - 14.73 * (patient['left_eye_al'] / patient['left_eye_cr'])
+            
+        # 计算右眼SE值
+        right_se = None
+        if patient['right_eye_al'] and patient['right_eye_cr']:
+            right_se = 43.86 - 14.73 * (patient['right_eye_al'] / patient['right_eye_cr'])
+            
+        formatted_patients.append({
+            'id': patient['id'],
+            'patient_name': patient['patient_name'],
+            'patient_age': patient['patient_age'],
+            'left_eye': {
+                'al': patient['left_eye_al'],
+                'cr': patient['left_eye_cr'],
+                'se': left_se
+            },
+            'right_eye': {
+                'al': patient['right_eye_al'],
+                'cr': patient['right_eye_cr'],
+                'se': right_se
+            },
+            'affected_eye': patient['affected_eye'],
+            'se_value': patient['se_value'],
+            'result': patient['result']
+        })
+    
     conn.close()
-    return render_template('patients.html', patients=patients)
+    return render_template('patients.html', patients=formatted_patients)
 
+# 修改查看患者详情的路由
 @app.route('/patient/<int:id>')
 def patient_detail(id):
     conn = get_db_connection()
     patient = conn.execute('SELECT * FROM results WHERE id = ?', (id,)).fetchone()
     conn.close()
-    return render_template('patient_detail.html', patient=patient)
+    
+    # 格式化眼睛数据以便显示
+    eye_data = {
+        'left_eye': {
+            'al': patient['left_eye_al'],
+            'cr': patient['left_eye_cr'],
+            'se': calculate_se(patient['left_eye_al'], patient['left_eye_cr']) if patient['left_eye_al'] and patient['left_eye_cr'] else None
+        },
+        'right_eye': {
+            'al': patient['right_eye_al'],
+            'cr': patient['right_eye_cr'],
+            'se': calculate_se(patient['right_eye_al'], patient['right_eye_cr']) if patient['right_eye_al'] and patient['right_eye_cr'] else None
+        },
+        'affected_eye': patient['affected_eye']
+    }
+    
+    return render_template('patient_detail.html', patient=patient, eye_data=eye_data)
+
+
+# 辅助函数：计算SE值
+def calculate_se(al, cr):
+    if al and cr:
+        return 43.86 - 14.73 * (al / cr)
+    return None
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)

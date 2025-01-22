@@ -233,10 +233,23 @@ function reload() {
 function saveResults() {
     const patientName = document.getElementById('patientName').value;
     const patientAge = document.getElementById('patientAge').value;
+    const leftEyeAL = parseFloat(document.getElementById('leftEyeAL').value);
+    const leftEyeCR = parseFloat(document.getElementById('leftEyeCR').value);
+    const rightEyeAL = parseFloat(document.getElementById('rightEyeAL').value);
+    const rightEyeCR = parseFloat(document.getElementById('rightEyeCR').value);
+    const affectedEye = document.getElementById('affectedEye').value;
 
     if (!patientName || !patientAge) {
         alert("请填写患者姓名和年龄");
         return;
+    }
+
+    // 计算受影响眼睛的SE值
+    let seValue = null;
+    if (affectedEye === 'left' && leftEyeAL && leftEyeCR) {
+        seValue = 43.86 - 14.73 * (leftEyeAL / leftEyeCR);
+    } else if (affectedEye === 'right' && rightEyeAL && rightEyeCR) {
+        seValue = 43.86 - 14.73 * (rightEyeAL / rightEyeCR);
     }
 
     fetch('/save_results', {
@@ -247,6 +260,12 @@ function saveResults() {
         body: JSON.stringify({
             patientName: patientName,
             patientAge: patientAge,
+            leftEyeAL: leftEyeAL || null,
+            leftEyeCR: leftEyeCR || null,
+            rightEyeAL: rightEyeAL || null,
+            rightEyeCR: rightEyeCR || null,
+            affectedEye: affectedEye,
+            seValue: seValue,
             answeredQuestions: answeredQuestions,
             result: document.getElementById('resultText').innerText
         }),
@@ -255,6 +274,8 @@ function saveResults() {
     .then(data => {
         if (data.success) {
             alert("结果已成功保存！");
+            // 可选：保存成功后跳转到患者列表页面
+            window.location.href = '/show_result';
         } else {
             alert("保存失败：" + data.error);
         }
