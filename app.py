@@ -67,10 +67,10 @@ questions = {
     "question": "患者的工作和生活需求？",
     "options": [
         { "text": "基本戴镜，优先远处和近处的视力，费用适中。", "next": None, "res": 0},
-        { "text": "完全脱镜，视力范围全面，但价格偏高。", "next": 5, "res": None }
+        { "text": "完全脱镜，视力范围全面，但价格偏高。", "next": None, "res": 1 }
     ]
     },
-    5: {
+    5: {# 这个选项被抛弃了
     "question": "患者眼轴长短？",
     "options": [
         { "text": "短眼轴", "next": None, "res": 1},
@@ -110,12 +110,12 @@ questions = {
     11: {
     "question": "对侧眼状况",
     "options": [
-        { "text": "远视", "next": 12, "res": None},
-        { "text": "正视", "next": 12, "res": None},
-        { "text": "近视", "next": 12, "res": None}
+        { "text": "远视", "next": None, "res": 10},
+        { "text": "正视", "next": None, "res": 10},
+        { "text": "近视", "next": None, "res": 10}
     ]
     },
-    12: {
+    12: {#ques 11本来引入到这，但是手术眼的眼轴长度可以被判断，所以这个问题被抛弃
     "question": "手术眼状况",
     "options": [
         { "text": "短眼轴", "next": None, "res": 6},
@@ -127,7 +127,7 @@ questions = {
 
 results = {
     0: "多焦点 双焦IOL",
-    1: "多焦点 EDOF",
+    1: "多焦点",
     2: "多焦点 三焦点IOL",
     3: "单焦点 微单视，-0.5D~-0.75D",
     4: "单焦点 中单视， -1.0D~-1.5D",
@@ -135,7 +135,8 @@ results = {
     6: "单焦点 预留+0.5D~0D",
     7: "单焦点 预留-0.25D~-0.5D",
     8: "单焦点 预留近视度数 <-2.0D ",
-    9: "单焦点 预留与对侧眼匹配，差值 <-2.0D"
+    9: "单焦点 预留与对侧眼匹配，差值 <-2.0D",
+    10:"单焦点"
 }
 # 在现有的代码中添加新的函数和修改submit_answer路由
 
