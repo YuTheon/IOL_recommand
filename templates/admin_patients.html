@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>患者记录 - IOL Assistant</title>
+    <title>所有患者 - IOL Assistant</title>
+    <link rel="stylesheet" href="/styles.css">
     <style>
+        /* 使用与 patients.html 相同的样式，但添加医生列显示 */
         * {
             margin: 0;
             padding: 0;
@@ -22,7 +24,6 @@
             min-height: 100vh;
         }
 
-        /* Sidebar - Same as index.html */
         .sidebar {
             width: 280px;
             background: white;
@@ -33,6 +34,7 @@
             overflow-y: auto;
         }
 
+        /* [复制 admin_users.html 中的所有侧边栏样式] */
         .logo {
             display: flex;
             align-items: center;
@@ -156,7 +158,6 @@
             color: #c30000;
         }
 
-        /* Main Content */
         .main-content {
             flex: 1;
             margin-left: 280px;
@@ -207,7 +208,6 @@
             box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
         }
 
-        /* Stats Cards */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -277,7 +277,6 @@
             color: #697386;
         }
 
-        /* Patient Cards */
         .patients-grid {
             display: grid;
             gap: 20px;
@@ -321,6 +320,7 @@
             align-items: center;
             gap: 12px;
             margin-bottom: 12px;
+            flex-wrap: wrap;
         }
 
         .patient-name {
@@ -336,6 +336,18 @@
             font-size: 13px;
             color: #697386;
             font-weight: 600;
+        }
+
+        .doctor-badge {
+            padding: 4px 12px;
+            background: linear-gradient(135deg, #ed893615 0%, #f6ad5515 100%);
+            border-radius: 6px;
+            font-size: 12px;
+            color: #ed8936;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .patient-meta {
@@ -406,33 +418,31 @@
             transform: scale(1.05);
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 80px 20px;
-        }
-
-        .empty-icon {
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 24px;
-            background: linear-gradient(135deg, #667eea08 0%, #764ba208 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .empty-state h3 {
-            font-size: 24px;
-            font-weight: 700;
-            color: #1a1f36;
-            margin-bottom: 8px;
-        }
-
-        .empty-state p {
-            font-size: 16px;
-            color: #697386;
+        .search-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             margin-bottom: 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .search-icon {
+            color: #697386;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            font-size: 15px;
+            color: #1a1f36;
+            outline: none;
+        }
+
+        .search-input::placeholder {
+            color: #a0aec0;
         }
 
         @media (max-width: 968px) {
@@ -482,21 +492,37 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{{ url_for('show_result') }}" class="nav-link active">
+                    <a href="/show_result" class="nav-link">
                         <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
                         </svg>
-                        <span>患者记录</span>
+                        <span>我的患者</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/users" class="nav-link">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                        </svg>
+                        <span>用户管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/all-patients" class="nav-link active">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/>
+                        </svg>
+                        <span>所有患者</span>
                     </a>
                 </li>
             </ul>
 
             <div class="user-profile">
                 <div class="user-card">
-                    <div class="user-avatar">{{ username[0] if username else 'U' }}</div>
+                    <div class="user-avatar">{{ username[0] if username else 'A' }}</div>
                     <div class="user-info">
-                        <h3>{{ username or '用户' }}</h3>
-                        <p>医疗专业人员</p>
+                        <h3>{{ username or '管理员' }}</h3>
+                        <p>系统管理员</p>
                     </div>
                 </div>
                 <button class="logout-btn" onclick="logout()">
@@ -511,10 +537,10 @@
         <main class="main-content">
             <div class="top-bar">
                 <div class="page-title">
-                    <h2>患者记录</h2>
-                    <p>管理您的患者评估记录</p>
+                    <h2>所有患者记录</h2>
+                    <p>查看和管理系统中的所有患者评估记录</p>
                 </div>
-                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <a href="/" class="btn btn-primary">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                     </svg>
@@ -533,7 +559,7 @@
                         </div>
                     </div>
                     <div class="stat-value">{{ patients|length }}</div>
-                    <div class="stat-subtitle">已保存记录</div>
+                    <div class="stat-subtitle">全部记录</div>
                 </div>
 
                 <div class="stat-card">
@@ -563,10 +589,17 @@
                 </div>
             </div>
 
+            <div class="search-bar">
+                <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                </svg>
+                <input type="text" class="search-input" id="searchInput" placeholder="搜索患者姓名、医生或诊断结果..." onkeyup="searchPatients()">
+            </div>
+
             {% if patients %}
-            <div class="patients-grid">
+            <div class="patients-grid" id="patientsGrid">
                 {% for patient in patients %}
-                <div class="patient-card">
+                <div class="patient-card" data-search-text="{{ patient.patient_name|lower }} {{ patient.doctor_name|lower }} {{ patient.result|lower }}">
                     <div class="patient-avatar">{{ patient.patient_name[0] if patient.patient_name else 'P' }}</div>
 
                     <div class="patient-info">
@@ -575,6 +608,12 @@
                             <span class="patient-age">{{ patient.patient_age }} 岁</span>
                             <span class="eye-badge {{ patient.affected_eye }}">
                                 {{ "左眼" if patient.affected_eye == "left" else "右眼" }}
+                            </span>
+                            <span class="doctor-badge">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                                </svg>
+                                {{ patient.doctor_name }}
                             </span>
                         </div>
 
@@ -600,16 +639,16 @@
                                 </span>
                             </div>
                             <div class="meta-item">
-                                <span class="meta-label">诊断结果</span>
-                                <span class="meta-value" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                    {{ patient.result[:40] + "..." if patient.result|length > 40 else patient.result }}
+                                <span class="meta-label">创建时间</span>
+                                <span class="meta-value">
+                                    {{ patient.created_at[:10] }}
                                 </span>
                             </div>
                         </div>
                     </div>
 
                     <div class="patient-actions">
-                        <a href="{{ url_for('patient_detail', id=patient.id) }}" class="btn-icon" title="查看详情">
+                        <a href="/patient/{{ patient.id }}" class="btn-icon" title="查看详情">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
                             </svg>
@@ -626,8 +665,8 @@
                     </svg>
                 </div>
                 <h3>暂无患者记录</h3>
-                <p>开始创建您的第一个患者评估记录</p>
-                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <p>系统中还没有任何患者评估记录</p>
+                <a href="/" class="btn btn-primary" style="margin-top: 20px;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                     </svg>
@@ -642,6 +681,22 @@
         function logout() {
             if (confirm('确定要退出登录吗？')) {
                 window.location.href = '/logout';
+            }
+        }
+
+        function searchPatients() {
+            const input = document.getElementById('searchInput');
+            const filter = input.value.toLowerCase();
+            const grid = document.getElementById('patientsGrid');
+            const cards = grid ? grid.getElementsByClassName('patient-card') : [];
+
+            for (let i = 0; i < cards.length; i++) {
+                const searchText = cards[i].getAttribute('data-search-text');
+                if (searchText.indexOf(filter) > -1) {
+                    cards[i].style.display = '';
+                } else {
+                    cards[i].style.display = 'none';
+                }
             }
         }
     </script>
