@@ -1,0 +1,20 @@
+# Flask
+flask
+werkzeug
+
+# RAG - LlamaIndex 核心
+llama-index-core
+llama-index-vector-stores-chroma
+llama-index-llms-ollama
+llama-index-embeddings-huggingface
+llama-index-readers-file
+
+# 向量数据库
+chromadb
+
+# Embedding 模型依赖
+sentence-transformers
+torch
+
+# PDF 解析（用于读取医疗文档）
+pypdf

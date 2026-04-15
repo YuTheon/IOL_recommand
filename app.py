@@ -5,7 +5,11 @@ from functools import wraps
 import secrets
 from datetime import datetime
 import json  # 确保在文件顶部导入
+import logging
 
+from rag_engine import KnowledgeBase
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__,
             static_url_path='',
@@ -13,6 +17,15 @@ app = Flask(__name__,
             template_folder='templates')
 
 app.secret_key = secrets.token_hex(16)
+
+# 初始化 RAG 知识库
+logger = logging.getLogger(__name__)
+try:
+    kb = KnowledgeBase()
+    logger.info("RAG 知识库初始化成功")
+except Exception as e:
+    logger.warning("RAG 知识库初始化失败，将使用规则引擎作为 fallback: %s", e)
+    kb = None
 
 
 def init_db():
@@ -236,6 +249,34 @@ def toggle_admin_role(user_id):
     return jsonify({"success": False, "message": "用户不存在"}), 404
 
 
+@app.route('/admin/update-knowledge', methods=['POST'])
+@login_required
+@admin_required
+def update_knowledge():
+    """管理员触发知识库重新索引"""
+    global kb
+
+    if kb is None:
+        try:
+            kb = KnowledgeBase()
+        except Exception as e:
+            return jsonify({"success": False, "message": f"知识库初始化失败: {e}"}), 500
+
+    data = request.json or {}
+    data_dir = data.get("data_dir")  # 可选：自定义文档目录
+
+    try:
+        result = kb.ingest_documents(data_dir=data_dir)
+        return jsonify(result)
+    except FileNotFoundError as e:
+        return jsonify({"success": False, "message": str(e)}), 404
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)}), 400
+    except Exception as e:
+        logger.error("知识库更新失败: %s", e)
+        return jsonify({"success": False, "message": f"知识库更新失败: {e}"}), 500
+
+
 # 决策树相关
 questions = {
     0: {
@@ -439,6 +480,26 @@ def submit_answer():
 
     base_result = results.get(result_id, "Result not found")
 
+    # 构建患者数据字典
+    patient_data = {
+        "axial_length": axial_length,
+        "se_value": se_value,
+        "affected_eye": affected_eye,
+        "flag": flag,
+    }
+
+    # 使用 RAG 知识库生成推荐（内含 fallback 机制）
+    if kb is not None:
+        final_result = kb.query_recommendation(patient_data, base_result)
+    else:
+        # RAG 未初始化，使用原有规则引擎
+        final_result = _rule_based_recommendation(base_result, axial_length, se_value, flag)
+
+    return jsonify({"result": final_result})
+
+
+def _rule_based_recommendation(base_result, axial_length, se_value, flag):
+    """原有的规则引擎推荐逻辑（作为 fallback）"""
     if "单" in base_result:
         additional_suggestion = get_single_focus_suggestion(axial_length, se_value)
     elif any(keyword in base_result for keyword in ["多焦", "EDOF", "三焦"]):
@@ -453,7 +514,6 @@ def submit_answer():
 
     recommended_models = get_lens_model(final_result)
     model_recommendations = "\n推荐晶体型号：\n" + "\n".join(f"- {model}" for model in recommended_models)
-
     final_result += model_recommendations
 
     formula_recommendation = get_formula_recommendation(axial_length)
@@ -463,7 +523,7 @@ def submit_answer():
     )
     final_result += formula_text + formula_links
 
-    return jsonify({"result": final_result})
+    return final_result
 
 
 @app.route('/save_results', methods=['POST'])
@@ -662,6 +722,57 @@ def update_patient_notes(id):
     conn.close()
 
     return jsonify({"success": True})
+
+
+@app.route('/rag')
+@login_required
+def rag():
+    return render_template('rag.html',
+                           username=session.get('full_name') or session.get('username'),
+                           role=session.get('role'))
+
+
+@app.route('/rag/query', methods=['POST'])
+@login_required
+def rag_query():
+    data = request.json
+    question = data.get('question', '').strip()
+    if not question:
+        return jsonify({"success": False, "message": "请输入问题"}), 400
+
+    global kb
+
+    # 若 kb 未初始化，尝试重新初始化（不阻塞回答）
+    if kb is None:
+        try:
+            kb = KnowledgeBase()
+            logger.info("RAG 知识库延迟初始化成功")
+        except Exception as e:
+            logger.warning("RAG 知识库初始化仍然失败，将仅使用 LLM 直接回答: %s", e)
+
+    try:
+        if kb is not None:
+            result = kb.query(question)
+        else:
+            # kb 彻底不可用时，直接调用 Ollama 回答
+            from llama_index.llms.ollama import Ollama as _Ollama
+            _llm = _Ollama(model="qwen2.5", base_url="http://localhost:11434", request_timeout=120.0)
+            prompt = (
+                f"你是一位专业的眼科人工晶体（IOL）顾问。请直接回答以下问题。\n\n"
+                f"## 用户问题\n{question}\n\n"
+                f"请用中文回答，格式清晰，重点突出。"
+            )
+            response = _llm.complete(prompt)
+            result = {"answer": str(response).strip(), "references": []}
+
+        return jsonify({
+            "success": True,
+            "answer": result["answer"],
+            "references": result["references"],
+        })
+    except Exception as e:
+        logger.error("RAG 查询失败: %s", e)
+        return jsonify({"success": False, "message": f"查询失败: {e}"}), 500
 
 
 if __name__ == '__main__':
